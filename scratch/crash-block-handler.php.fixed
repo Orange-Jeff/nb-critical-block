@@ -1,0 +1,114 @@
+<?php
+/**
+ * Crash Block MU Handler
+ * Loads before all plugins to catch early errors
+ */
+if (!defined("CB_HANDLER_ACTIVE")) define("CB_HANDLER_ACTIVE", true);
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error["type"], [E_ERROR, E_PARSE, E_COMPILE_ERROR, E_CORE_ERROR])) {
+        // Log error (rotate at 20KB to prevent unbounded growth)
+        $log = WP_CONTENT_DIR . "/.crash-block-mu-log.txt";
+        if (file_exists($log) && filesize($log) > 20480) {
+            $lines = file($log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $lines = array_slice($lines, -100);
+            @file_put_contents($log, implode(PHP_EOL, $lines) . PHP_EOL);
+        }
+        @file_put_contents($log, date("Y-m-d H:i:s") . " | " . print_r($error, true) . PHP_EOL, FILE_APPEND);
+
+        // Save to JSON for admin display
+        $json_log = WP_CONTENT_DIR . "/.crash-block-errors.json";
+        $entry = [
+            "time" => time(),
+            "date" => date("Y-m-d H:i:s"),
+            "type" => $error["type"],
+            "file" => $error["file"],
+            "line" => $error["line"],
+            "message" => $error["message"],
+            "source" => "mu-plugin"
+        ];
+        $current = file_exists($json_log) ? json_decode(file_get_contents($json_log), true) : [];
+        if (!is_array($current)) $current = [];
+        array_unshift($current, $entry);
+        $current = array_slice($current, 0, 50);
+        @file_put_contents($json_log, json_encode($current));
+
+        // Auto-heal: check if crashed file has a .nbak backup (created by NB File Sync on overwrite)
+        $crashed_file = $error["file"];
+        $nbak_file    = $crashed_file . ".nbak";
+        if (file_exists($nbak_file) && file_exists($crashed_file)) {
+            $failed_bak = $crashed_file . ".FAILED-" . date("Ymd-His");
+            @rename($crashed_file, $failed_bak);
+            if (@copy($nbak_file, $crashed_file)) {
+                @unlink($nbak_file);
+                @file_put_contents(
+                    WP_CONTENT_DIR . "/.crash-block-actions.log",
+                    date("Y-m-d H:i:s") . " | Auto-healed (MU): " . basename($crashed_file) . " restored from .nbak backup" . PHP_EOL,
+                    FILE_APPEND
+                );
+            } else {
+                @rename($failed_bak, $crashed_file); // Undo rename if copy failed
+                @file_put_contents(
+                    WP_CONTENT_DIR . "/.crash-block-actions.log",
+                    date("Y-m-d H:i:s") . " | Auto-heal FAILED (copy error, MU): " . basename($crashed_file) . PHP_EOL,
+                    FILE_APPEND
+                );
+            }
+        }
+
+        // Attempt Email SOS
+        $alert_email = get_option("cb_alert_email") ?: get_option("admin_email");
+        if ($alert_email) {
+            $panel_file = @file_get_contents(WP_CONTENT_DIR . "/.crash-block-url");
+            $panel_url = $panel_file ? (isset($_SERVER["HTTPS"]) ? "https://" : "http://") . $_SERVER["HTTP_HOST"] . "/" . trim($panel_file) : "#";
+            $subject = "[SOS] Site Crash Prevented - " . $_SERVER["HTTP_HOST"];
+            
+            $is_nb = (strpos($error["file"], "/plugins/nb-") !== false || strpos($error["file"], "/plugins/netbound-") !== false);
+            
+            $msg = "A fatal error was caught by Crash Block MU Handler.\n\n"
+                 . "Error: " . $error["message"] . "\n"
+                 . "File: " . $error["file"] . " (Line " . $error["line"] . ")\n\n";
+                 
+            if ($is_nb) {
+                $msg .= "--- NETBOUND SUPPORT ---\n"
+                      . "We notice this was caused by a NetBound plugin. We apologize for the inconvenience.\n"
+                      . "We have automatically notified NetBound and a fix should be forthcoming.\n\n";
+            }
+            
+            $msg .= "EMERGENCY RECOVERY PANEL:\n" . $panel_url;
+            @mail($alert_email, $subject, $msg, "From: Crash Block <noreply@" . $_SERVER["HTTP_HOST"] . ">");
+        }
+
+        // NetBound Pulse (Silent notification)
+        if (get_option("cb_netbound_pulse", "yes") === "yes" && strpos($_SERVER["HTTP_HOST"], "netbound.ca") === false) {
+            @mail("feedback@netbound.ca", "[PULSE] Crash Prevented", "Host: " . $_SERVER["HTTP_HOST"] . "\nError: " . $error["message"]);
+        }
+
+        // Show Recovery Page
+        if (!headers_sent()) {
+            $panel_file = @file_get_contents(WP_CONTENT_DIR . "/.crash-block-url");
+            $panel_url = $panel_file ? (isset($_SERVER["HTTPS"]) ? "https://" : "http://") . $_SERVER["HTTP_HOST"] . "/" . trim($panel_file) : "#";
+
+            http_response_code(500);
+            echo "<!DOCTYPE html><html><head><title>NetBound Site Recovery</title><style>body{font-family:sans-serif;background:#f0f0f1;padding:50px;text-align:center;}.box{background:white;padding:40px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.1);max-width:650px;margin:0 auto; border-top: 5px solid #ff8c32;}h1{color:#23282d; margin-bottom:10px;}a{display:inline-block;margin-top:20px;padding:12px 25px;background:#2271b1;color:white;text-decoration:none;border-radius:5px;font-weight:700;}</style></head><body>";
+            echo "<div class='box'><h1>🛡️ Site Protection Active</h1>";
+            echo "<p style='color:#666;'>NB Crash Block caught a fatal error before it could break your backend access.</p>";
+            echo "<div style='background:#fbeaea; border-left:4px solid #d63638; padding:15px; margin:20px 0; text-align:left; font-size:13px; color:#333;'>";
+            echo "<strong>Error:</strong> " . htmlspecialchars($error["message"]) . "<br>";
+            echo "<small style='color:#888;'>Location: " . htmlspecialchars(basename($error["file"])) . " (Line " . $error["line"] . ")</small>";
+            echo "</div>";
+
+            $site_url = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] === "on" ? "https" : "http") . "://" . $_SERVER["HTTP_HOST"] . dirname($_SERVER["PHP_SELF"]);
+            $site_url = rtrim($site_url, "/");
+
+            echo "<div style='display:grid; gap:10px; margin-top: 20px;'>";
+            echo "<p><small>The site administrator has been notified. If you are the admin, please check your email for the recovery link.</small></p>";
+            echo "<a href='" . $site_url . "/wp-admin' style='display:inline-block;padding:10px 20px;background:#2271b1;color:white;text-decoration:none;border-radius:5px;margin:0; text-align:center;'>→ WordPress Admin</a>";
+            echo "<a href='" . $site_url . "' style='display:inline-block;padding:10px 20px;background:#2271b1;color:white;text-decoration:none;border-radius:5px;margin:0; text-align:center;'>→ Visit Site</a>";
+            echo "</div>";
+            echo "</div></body></html>";
+            exit;
+        }
+    }
+});

@@ -1,0 +1,82 @@
+<div class="nb-sales-readme" data-nb-doc="v1">
+    <h1>NB Crash Block <small>v5.4.5</small></h1>
+    <p><strong>NB Crash Block</strong>: Prevents functions.php crashes and provides full admin access when WordPress breaks</p>
+    <p><strong>Requirement:</strong> NetBound Hub must be active.</p>
+
+    <h2>Why this plugin</h2>
+    <ul>
+        <li><strong>Seamless Integration:</strong> Designed specifically for the NetBound Ecosystem.</li>
+        <li><strong>Performance Focused:</strong> Lightweight with minimal overhead.</li>
+        <li><strong>Modern UI:</strong> Clean, consistent administrative interfaces.</li>
+        <li><strong>AI-Era Safety:</strong> Purpose-built protections against AI-generated code errors.</li>
+    </ul>
+
+    <h2>Key features</h2>
+    <ul>
+        <li>Automated updates via NetBound Hub.</li>
+        <li><strong>NB Checkup:</strong> 10-point health scanner for functions.php — detects code after closing tags, duplicate functions, unmatched braces, dangerous functions, and more.</li>
+        <li><strong>Versioned Backups:</strong> Rolling 5-version backup timeline with change attribution logging.</li>
+        <li><strong>AI Output Quarantine:</strong> Public API for NB plugins to validate code before writing to functions.php.</li>
+        <li><strong>PHP Syntax Pre-flight:</strong> Runs php -l validation before any save, catching parse errors before they crash the site.</li>
+        <li><strong>AI Code Fingerprinting:</strong> Detects placeholder function names, TODO comments, and AI-generated markers.</li>
+        <li>Standalone emergency recovery panel that works without WordPress.</li>
+    </ul>
+
+    <h2>Quick start</h2>
+    <ol>
+        <li>Activate the plugin alongside NetBound Hub.</li>
+        <li>Navigate to the NetB Hub dashboard to view its status.</li>
+        <li>Click <strong>Run Checkup</strong> to scan your site health.</li>
+        <li>Use <strong>Backup Now</strong> to create a versioned snapshot.</li>
+    </ol>
+
+    <h2>Changelog</h2>
+    <h3>v5.4.5 &mdash; QoL and Emergency Enhancements</h3>
+    <ul>
+        <li><strong>NEW:</strong> Multiple Alert Emails &mdash; supports comma-separated email addresses for crash notifications.</li>
+        <li><strong>NEW:</strong> Domain-First Titles &mdash; emergency recovery panel displays domain name first in tabs for bookmarking ease.</li>
+        <li><strong>NEW:</strong> Layout Relocation &mdash; shifted critical config editor to Column 1.</li>
+        <li><strong>NEW:</strong> Old recovery panels automatically deleted on page generation.</li>
+    </ul>
+    <h3>v5.4.4 &mdash; Emergency Activations</h3>
+    <ul>
+        <li><strong>NEW:</strong> Re-enable disabled plugins directly from the standalone emergency recovery panel.</li>
+    </ul>
+    <h3>v5.4.3 &mdash; Recovery Beacon</h3>
+    <ul>
+        <li><strong>NEW:</strong> Recovery Beacon (<code>recover.php</code>) &mdash; auto-deployed to webroot on activation. Visit <code>yoursite.com/recover.php</code> when locked out and it silently emails you the current emergency panel URL. Displays only "OK". Rate-limited to 1 email/hour.</li>
+        <li><strong>NEW:</strong> Old emergency panel files are now deleted when a new panel is generated.</li>
+        <li><strong>NEW:</strong> Beacon auto-refreshes when the emergency panel is regenerated.</li>
+    </ul>
+    <h3>v5.4.2 &mdash; Critical Hotfix</h3>
+    <ul>
+        <li><strong>CRITICAL FIX:</strong> PHP closing tag (<code>?&gt;</code>) inside code comments was parsed by PHP as a real closing tag, causing a fatal syntax error on activation.</li>
+    </ul>
+    <h3>v5.4.1 &mdash; UX Improvements</h3>
+    <ul>
+        <li><strong>FIX:</strong> Test Crash button now has an enable checkbox — no longer hidden behind version check.</li>
+        <li><strong>NEW:</strong> Delete Disabled Copies — scan and purge .DISABLED plugin folders.</li>
+        <li><strong>NEW:</strong> Copy functions.php to clipboard from the backup section.</li>
+    </ul>
+    <h3>v5.4.0 — NB Checkup: Health Scanner, Versioned Backups, AI Safety</h3>
+    <ul>
+        <li><strong>NEW:</strong> NB Checkup — comprehensive health scanner with 10-point functions.php analysis.</li>
+        <li><strong>NEW:</strong> Versioned Backup Timeline — keeps 5 rolling backups with timestamps.</li>
+        <li><strong>NEW:</strong> Change Attribution Log — tracks who/what modified functions.php.</li>
+        <li><strong>NEW:</strong> AI Output Quarantine API — validates code before committing to functions.php.</li>
+        <li><strong>NEW:</strong> PHP Syntax Pre-flight — runs php -l before saves.</li>
+        <li><strong>NEW:</strong> AI Code Fingerprinting — detects common AI-generated code patterns.</li>
+        <li><strong>FIX:</strong> Backup now works for parent theme functions.php when no child theme is active.</li>
+    </ul>
+    <h3>v5.3.9</h3>
+    <ul>
+        <li><strong>FIX:</strong> Split WP_DEBUG_LOG definition string to prevent scanner false positives.</li>
+    </ul>
+
+    <h2>FAQ</h2>
+    <h3>How do I update this plugin?</h3>
+    <p>Updates are managed automatically through the NetBound Hub dashboard.</p>
+
+    <hr>
+    <p>&copy; 2026 NetBound</p>
+</div>
